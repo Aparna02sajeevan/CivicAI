@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CivicAI — Greenville Municipal Chatbot | SDG 6 + 12</title>
+  <meta name="description" content="AI-powered guide to Greenville's water services, waste management, recycling, and environmental policies. Powered by RAG + Gemini." />
+  <meta name="keywords" content="Greenville, civic AI, water management, recycling, waste disposal, SDG 6, SDG 12, e-waste, RAG chatbot" />
+  <meta name="theme-color" content="#00d4aa" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Extra styles for full-stack backend status indicator -->
+  <style>
+    .backend-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: rgba(0,212,170,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .backend-indicator {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .backend-indicator.ready  { color: var(--water-400); }
+    .backend-indicator.warn   { color: var(--warn); }
+    .backend-indicator.error  { color: #fc8181; }
+    .backend-hint {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .backend-hint code {
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'Courier New', monospace;
+      color: var(--water-400);
+    }
+    .arch-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    .arch-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--bg-card);
+    }
+    .arch-badge.highlight {
+      border-color: rgba(0,212,170,0.3);
+      color: var(--water-400);
+      background: rgba(0,212,170,0.06);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header id="app-header" role="banner">
+    <div class="header-brand">
+      <button class="btn-icon" id="sidebar-toggle" aria-label="Toggle document sidebar" title="Toggle Sidebar">☰</button>
+      <div class="brand-logo" aria-hidden="true">🌿</div>
+      <div class="brand-text">
+        <h1>CivicAI · Greenville</h1>
+        <p>Municipal Water &amp; Waste Assistant</p>
+      </div>
+    </div>
+
+    <div class="header-sdgs" aria-label="SDG alignment">
+      <span class="sdg-badge sdg6">💧 SDG 6 — Clean Water</span>
+      <span class="sdg-badge sdg12">♻️ SDG 12 — Responsible Consumption</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-new-chat" id="new-chat-btn" title="Start new conversation">➕ New Chat</button>
+      <div class="status-bar" style="margin:0;padding:5px 12px;font-size:11px;">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── App Body ────────────────────────────────────────── -->
+  <div id="app-body">
+
+    <!-- ── Sidebar ──────────────────────────────────────── -->
+    <nav id="sidebar" aria-label="Policy document navigator">
+      <!-- Chat History -->
+      <div class="sidebar-history-section" id="sidebar-history-section">
+        <div class="sidebar-history-header">
+          <h2>Recent Chats</h2>
+          <button class="btn-new-chat" id="sidebar-new-chat-btn" style="padding: 2px 8px; font-size: 11px;">+ New</button>
+        </div>
+        <div class="sidebar-history-list" id="sidebar-history-list">
+          <div style="padding: 8px 4px; font-size: 11px; color: var(--text-muted);">No recent chats yet</div>
+        </div>
+      </div>
+
+      <div class="sidebar-header">
+        <h2>Policy Documents</h2>
+        <div class="sidebar-search">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            id="sidebar-search-input"
+            type="search"
+            placeholder="Search documents…"
+            aria-label="Search policy documents"
+          />
+        </div>
+      </div>
+      <div class="sidebar-docs" id="sidebar-docs-list" role="list" aria-label="Document list">
+        <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">
+          Loading documents…
+        </div>
+      </div>
+    </nav>
+
+    <!-- ── Chat Area ──────────────────────────────────────  -->
+    <main id="chat-area" role="main">
+
+      <!-- Welcome Screen -->
+      <section id="welcome-screen" aria-label="Welcome">
+        <div class="welcome-icon" aria-hidden="true">🌊</div>
+        <h2>Ask Greenville Anything</h2>
+        <p>
+          AI-powered guide to Greenville's municipal services.
+          Ask about water leaks, recycling, e-waste, garbage schedules,
+          hazardous waste, or any civic environmental policy.
+        </p>
+
+        <!-- Architecture badges -->
+        <div class="arch-badges">
+          <span class="arch-badge highlight">🐍 Python FastAPI</span>
+          <span class="arch-badge highlight">🔍 Sentence Transformers</span>
+          <span class="arch-badge highlight">🤖 Gemini 1.5 Flash</span>
+          <span class="arch-badge">⚡ REST API</span>
+          <span class="arch-badge">📄 51 Policy Chunks</span>
+        </div>
+
+        <!-- Backend status card -->
+        <div class="backend-status-bar" id="backend-status-card">
+          <span class="backend-indicator warn">⏳ Connecting to backend…</span>
+          <span class="backend-hint">Make sure <code>python main.py</code> is running in the backend folder</span>
+        </div>
+
+        <div class="example-questions">
+          <h3>Try asking</h3>
+          <div class="example-chips" role="list">
+            <button class="example-chip" role="listitem" data-q="How do I report a water leak in Greenville?" id="chip-1">
+              💧 How do I report a water leak?
+            </button>
+            <button class="example-chip" role="listitem" data-q="Where can I recycle e-waste in Greenville?" id="chip-2">
+              💻 Where can I recycle e-waste?
+            </button>
+            <button class="example-chip" role="listitem" data-q="What day is garbage collected in Zone B?" id="chip-3">
+              🗑️ What day is garbage collected in Zone B?
+            </button>
+            <button class="example-chip" role="listitem" data-q="How do I dispose of household hazardous waste like paint and batteries?" id="chip-4">
+              ⚠️ How do I dispose of paint and batteries?
+            </button>
+            <button class="example-chip" role="listitem" data-q="My water looks brown and discolored — what should I do?" id="chip-5">
+              🧪 My water looks brown — what should I do?
+            </button>
+            <button class="example-chip" role="listitem" data-q="How do I request a bulk waste pickup for old furniture?" id="chip-6">
+              🛋️ How do I schedule bulk pickup for furniture?
+            </button>
+            <button class="example-chip" role="listitem" data-q="What water conservation rebates are available in Greenville?" id="chip-7">
+              🌊 What water conservation rebates are available?
+            </button>
+            <button class="example-chip" role="listitem" data-q="How do I report illegal dumping in Greenville?" id="chip-8">
+              📋 How do I report illegal dumping?
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat Messages -->
+      <div
+        id="messages-container"
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
+        aria-relevant="additions"
+      >
+        <!-- Messages injected by app.js -->
+      </div>
+
+      <!-- Floating Scroll to Bottom Button -->
+      <button id="scroll-to-bottom-btn" aria-label="Scroll to latest message" title="Scroll to bottom">
+        ⬇️ Scroll to bottom
+      </button>
+
+      <!-- Input Area -->
+      <div id="input-area" role="form" aria-label="Chat input">
+        <div class="input-wrapper">
+          <textarea
+            id="chat-input"
+            rows="1"
+            placeholder="Ask about water, recycling, waste disposal, or any Greenville municipal service…"
+            aria-label="Type your question"
+            maxlength="1000"
+          ></textarea>
+          <button id="send-btn" aria-label="Send message" title="Send (Enter)">➤</button>
+        </div>
+        <p class="input-footer">
+          Full-stack RAG · <strong>FastAPI</strong> backend + <strong>Sentence Transformers</strong> + <strong>Gemini 1.5 Flash</strong> · SDG 6 &amp; 12
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────── -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ── Scripts ────────────────────────────────────────── -->
+  <script src="app.js"></script>
+
+</body>
+</html>

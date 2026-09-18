@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CivicAI — Greenville Municipal Chatbot | SDG 6 + 12</title>
+  <meta name="description"
+    content="Ask any question about Greenville's water services, waste management, recycling programs, and environmental policies. Powered by RAG AI." />
+  <meta name="keywords"
+    content="Greenville, municipal chatbot, water management, recycling, waste disposal, SDG 6, SDG 12, e-waste, civic AI" />
+  <meta property="og:title" content="CivicAI — Greenville Municipal Assistant" />
+  <meta property="og:description" content="AI-powered chatbot for Greenville municipal water and waste policies" />
+  <meta name="theme-color" content="#00d4aa" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ── API Key Modal ───────────────────────────────────── -->
+  <div id="api-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <h2 id="modal-title">🌿 Welcome to CivicAI</h2>
+      <p>
+        Enter your <strong>Google Gemini API key</strong> to enable AI-powered answers.
+        Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank"
+          rel="noopener">aistudio.google.com</a>.
+        Your key is stored locally in your browser only.
+      </p>
+
+      <div class="modal-field">
+        <label for="api-key-input">Gemini API Key</label>
+        <input id="api-key-input" type="password" placeholder="AQ••••••••••••••••••••••••••••••••••••"
+          autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-primary" id="save-api-btn">Save Key &amp; Start Chat</button>
+        <button class="btn-secondary" id="skip-api-btn">Skip for now</button>
+      </div>
+
+      <div class="modal-note">
+        ⚠️ <span>Without an API key, the app can still demonstrate document retrieval but cannot generate AI
+          answers.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header id="app-header" role="banner">
+    <div class="header-brand">
+      <button class="btn-icon" id="sidebar-toggle" aria-label="Toggle document sidebar"
+        title="Toggle Sidebar">☰</button>
+      <div class="brand-logo" aria-hidden="true">🌿</div>
+      <div class="brand-text">
+        <h1>CivicAI · Greenville</h1>
+        <p>Municipal Water &amp; Waste Assistant</p>
+      </div>
+    </div>
+
+    <div class="header-sdgs" aria-label="SDG alignment">
+      <span class="sdg-badge sdg6">💧 SDG 6 — Clean Water</span>
+      <span class="sdg-badge sdg12">♻️ SDG 12 — Responsible Consumption</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-new-chat" id="new-chat-btn" title="Start new conversation">➕ New Chat</button>
+      <button class="btn-icon" id="settings-btn" aria-label="API Key Settings" title="Settings — API Key">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ── App Body ────────────────────────────────────────── -->
+  <div id="app-body">
+
+    <!-- ── Sidebar: Document Navigator & History ───────── -->
+    <nav id="sidebar" aria-label="Policy document navigator">
+      <!-- Chat History -->
+      <div class="sidebar-history-section" id="sidebar-history-section">
+        <div class="sidebar-history-header">
+          <h2>Recent Chats</h2>
+          <button class="btn-new-chat" id="sidebar-new-chat-btn" style="padding: 2px 8px; font-size: 11px;">+ New</button>
+        </div>
+        <div class="sidebar-history-list" id="sidebar-history-list">
+          <div style="padding: 8px 4px; font-size: 11px; color: var(--text-muted);">No recent chats yet</div>
+        </div>
+      </div>
+
+      <div class="sidebar-header">
+        <h2>Policy Documents</h2>
+        <div class="sidebar-search">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input id="sidebar-search-input" type="search" placeholder="Search documents…"
+            aria-label="Search policy documents" />
+        </div>
+      </div>
+      <div class="sidebar-docs" id="sidebar-docs-list" role="list" aria-label="Document list">
+        <!-- Populated by app.js -->
+      </div>
+    </nav>
+
+    <!-- ── Chat Area ───────────────────────────────────── -->
+    <main id="chat-area" role="main">
+
+      <!-- Welcome Screen -->
+      <section id="welcome-screen" aria-label="Welcome">
+        <div class="welcome-icon" aria-hidden="true">🌊</div>
+
+        <h2>Ask Greenville Anything</h2>
+        <p>
+          I'm your AI-powered guide to Greenville's municipal services.
+          Ask me about water leaks, recycling, e-waste, garbage collection,
+          hazardous waste, or any civic environmental policy.
+        </p>
+
+        <div class="status-bar" id="status-bar" role="status" aria-live="polite">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Initializing…</span>
+        </div>
+
+        <div class="example-questions">
+          <h3>Try asking</h3>
+          <div class="example-chips" role="list">
+            <button class="example-chip" role="listitem" data-q="How do I report a water leak in Greenville?"
+              id="chip-1">
+              💧 How do I report a water leak?
+            </button>
+            <button class="example-chip" role="listitem" data-q="Where can I recycle e-waste in Greenville?"
+              id="chip-2">
+              💻 Where can I recycle e-waste?
+            </button>
+            <button class="example-chip" role="listitem" data-q="What day is garbage collected in Zone B?" id="chip-3">
+              🗑️ What day is garbage collected in Zone B?
+            </button>
+            <button class="example-chip" role="listitem"
+              data-q="How do I dispose of household hazardous waste like paint and batteries?" id="chip-4">
+              ⚠️ How do I dispose of paint and batteries?
+            </button>
+            <button class="example-chip" role="listitem"
+              data-q="My water looks brown and discolored — what should I do?" id="chip-5">
+              🧪 My water looks brown — what should I do?
+            </button>
+            <button class="example-chip" role="listitem"
+              data-q="How do I request a bulk waste pickup for old furniture?" id="chip-6">
+              🛋️ How do I schedule bulk pickup for furniture?
+            </button>
+            <button class="example-chip" role="listitem"
+              data-q="What are Greenville's water conservation programs and rebates?" id="chip-7">
+              🌊 What water conservation rebates are available?
+            </button>
+            <button class="example-chip" role="listitem" data-q="How do I report illegal dumping in Greenville?"
+              id="chip-8">
+              📋 How do I report illegal dumping?
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat Messages -->
+      <div id="messages-container" role="log" aria-live="polite" aria-label="Chat messages" aria-relevant="additions">
+        <!-- Messages injected by app.js -->
+      </div>
+
+      <!-- Floating Scroll to Bottom Button -->
+      <button id="scroll-to-bottom-btn" aria-label="Scroll to latest message" title="Scroll to bottom">
+        ⬇️ Scroll to bottom
+      </button>
+
+      <!-- Input Area -->
+      <div id="input-area" role="form" aria-label="Chat input">
+        <div class="input-wrapper">
+          <textarea id="chat-input" rows="1"
+            placeholder="Ask about water, recycling, waste disposal, or any municipal service…"
+            aria-label="Type your question" maxlength="1000"></textarea>
+          <button id="send-btn" aria-label="Send message" title="Send (Enter)">
+            ➤
+          </button>
+        </div>
+        <p class="input-footer">
+          Powered by <strong>RAG</strong> (Retrieval-Augmented Generation) · Greenville Municipal Policy Index · SDG 6
+          &amp; 12
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ── Toast Notification ─────────────────────────────── -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ── Scripts ────────────────────────────────────────── -->
+  <script src="knowledge_base.js"></script>
+  <script src="app.js"></script>
+
+</body>
+
+</html>
